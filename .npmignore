@@ -1,0 +1,11 @@
+src/
+.env*
+*.log
+.DS_Store
+.turbo/
+coverage/
+.nyc_output/
+tsconfig.json
+tsup.config.ts
+*.test.ts
+__tests__/
