@@ -1,6 +1,7 @@
 import {
   Action,
   ActionExample,
+  ActionResult,
   HandlerCallback,
   IAgentRuntime,
   Memory,
@@ -87,7 +88,7 @@ export const collateralManagementAction: Action = {
     state: State | undefined,
     _options: { [key: string]: unknown } | undefined,
     callback?: HandlerCallback,
-  ): Promise<void> => {
+  ): Promise<ActionResult> => {
     logger.log("Starting AAVE_COLLATERAL_MANAGEMENT handler...");
 
     let currentState = state;
@@ -112,11 +113,16 @@ export const collateralManagementAction: Action = {
 
     if (!isValidCollateralContent(content)) {
       logger.error("Invalid content for AAVE_COLLATERAL_MANAGEMENT action.");
+      const errorMessage =
+        "Unable to process collateral management request. Please specify the asset and action (enable/disable).";
       callback?.({
-        text: "Unable to process collateral management request. Please specify the asset and whether to enable or disable it as collateral.",
-        content: { error: "Invalid collateral management parameters" },
+        text: errorMessage,
+        content: { error: "Invalid collateral parameters" },
       });
-      return;
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
 
     try {
@@ -124,11 +130,16 @@ export const collateralManagementAction: Action = {
       const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
 
       if (!rpcUrl || !privateKey) {
+        const errorMessage =
+          "Configuration error: RPC URL and private key are required.";
         callback?.({
-          text: "Configuration error: RPC URL and private key are required.",
+          text: errorMessage,
           content: { error: "Missing configuration" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       // Get asset address (simplified - in production you'd have a mapping)
@@ -141,11 +152,15 @@ export const collateralManagementAction: Action = {
 
       const assetAddress = assetAddresses[content.asset.toUpperCase()];
       if (!assetAddress) {
+        const errorMessage = `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`;
         callback?.({
-          text: `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`,
+          text: errorMessage,
           content: { error: "Unsupported asset" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       const isEnabling = content.enable;
@@ -192,14 +207,30 @@ Note: This is a demonstration. In production, actual blockchain transactions wou
           success: true,
         },
       });
+
+      return {
+        text: `Successfully ${content.enable ? "enabled" : "disabled"} ${content.asset} as collateral on Aave V3`,
+        success: true,
+        data: {
+          asset: content.asset,
+          action: content.enable ? "enable" : "disable",
+          transactionHash: mockTxHash,
+        },
+      };
     } catch (error) {
       logger.error("Collateral management operation failed:", error);
+      const errorMessage =
+        "Failed to manage collateral on Aave. Please try again.";
       callback?.({
-        text: "Failed to manage collateral setting. Please try again.",
+        text: errorMessage,
         content: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
   },
   examples: [

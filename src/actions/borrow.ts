@@ -1,6 +1,7 @@
 import {
   Action,
   ActionExample,
+  ActionResult,
   HandlerCallback,
   IAgentRuntime,
   Memory,
@@ -85,7 +86,7 @@ export const borrowAction: Action = {
     state: State | undefined,
     _options: { [key: string]: unknown } | undefined,
     callback?: HandlerCallback,
-  ): Promise<void> => {
+  ): Promise<ActionResult> => {
     logger.log("Starting AAVE_BORROW handler...");
 
     let currentState = state;
@@ -110,11 +111,16 @@ export const borrowAction: Action = {
 
     if (!isValidBorrowContent(content)) {
       logger.error("Invalid content for AAVE_BORROW action.");
+      const errorMessage =
+        "Unable to process borrow request. Please specify the asset and amount to borrow.";
       callback?.({
-        text: "Unable to process borrow request. Please specify the asset and amount to borrow.",
+        text: errorMessage,
         content: { error: "Invalid borrow parameters" },
       });
-      return;
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
 
     try {
@@ -122,11 +128,16 @@ export const borrowAction: Action = {
       const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
 
       if (!rpcUrl || !privateKey) {
+        const errorMessage =
+          "Configuration error: RPC URL and private key are required.";
         callback?.({
-          text: "Configuration error: RPC URL and private key are required.",
+          text: errorMessage,
           content: { error: "Missing configuration" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       // Create clients
@@ -152,11 +163,15 @@ export const borrowAction: Action = {
 
       const assetAddress = assetAddresses[content.asset.toUpperCase()];
       if (!assetAddress) {
+        const errorMessage = `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`;
         callback?.({
-          text: `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`,
+          text: errorMessage,
           content: { error: "Unsupported asset" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       const amount = parseUnits(content.amount, 6); // Assuming 6 decimals for simplicity
@@ -199,14 +214,31 @@ Note: This is a demonstration. In production, actual blockchain transactions wou
           success: true,
         },
       });
+
+      return {
+        text: `Successfully borrowed ${content.amount} ${content.asset} from Aave V3`,
+        success: true,
+        data: {
+          asset: content.asset,
+          amount: content.amount,
+          rateMode: content.rateMode,
+          transactionHash: mockTxHash,
+        },
+      };
     } catch (error) {
       logger.error("Borrow operation failed:", error);
+      const errorMessage =
+        "Failed to borrow from Aave. Please check your collateral and try again.";
       callback?.({
-        text: "Failed to borrow from Aave. Please check your collateral and try again.",
+        text: errorMessage,
         content: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
   },
   examples: [

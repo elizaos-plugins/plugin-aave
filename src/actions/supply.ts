@@ -1,6 +1,7 @@
 import {
   Action,
   ActionExample,
+  ActionResult,
   HandlerCallback,
   IAgentRuntime,
   Memory,
@@ -86,7 +87,7 @@ export const supplyAction: Action = {
     state: State | undefined,
     _options: { [key: string]: unknown } | undefined,
     callback?: HandlerCallback,
-  ): Promise<void> => {
+  ): Promise<ActionResult> => {
     logger.log("Starting AAVE_SUPPLY handler...");
 
     let currentState = state;
@@ -111,11 +112,16 @@ export const supplyAction: Action = {
 
     if (!isValidSupplyContent(content)) {
       logger.error("Invalid content for AAVE_SUPPLY action.");
+      const errorMessage =
+        "Unable to process supply request. Please specify the asset and amount to supply.";
       callback?.({
-        text: "Unable to process supply request. Please specify the asset and amount to supply.",
+        text: errorMessage,
         content: { error: "Invalid supply parameters" },
       });
-      return;
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
 
     try {
@@ -123,11 +129,16 @@ export const supplyAction: Action = {
       const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
 
       if (!rpcUrl || !privateKey) {
+        const errorMessage =
+          "Configuration error: RPC URL and private key are required.";
         callback?.({
-          text: "Configuration error: RPC URL and private key are required.",
+          text: errorMessage,
           content: { error: "Missing configuration" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       // Create clients
@@ -153,11 +164,15 @@ export const supplyAction: Action = {
 
       const assetAddress = assetAddresses[content.asset.toUpperCase()];
       if (!assetAddress) {
+        const errorMessage = `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`;
         callback?.({
-          text: `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`,
+          text: errorMessage,
           content: { error: "Unsupported asset" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       const amount = parseUnits(content.amount, 6); // Assuming 6 decimals for simplicity
@@ -195,14 +210,30 @@ Note: This is a demonstration. In production, actual blockchain transactions wou
           success: true,
         },
       });
+
+      return {
+        text: `Successfully supplied ${content.amount} ${content.asset} to Aave V3`,
+        success: true,
+        data: {
+          asset: content.asset,
+          amount: content.amount,
+          enableCollateral: content.enableCollateral,
+          transactionHash: mockTxHash,
+        },
+      };
     } catch (error) {
       logger.error("Supply operation failed:", error);
+      const errorMessage = "Failed to supply asset to Aave. Please try again.";
       callback?.({
-        text: "Failed to supply asset to Aave. Please try again.",
+        text: errorMessage,
         content: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
   },
   examples: [

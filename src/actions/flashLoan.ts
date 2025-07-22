@@ -1,6 +1,7 @@
 import {
   Action,
   ActionExample,
+  ActionResult,
   HandlerCallback,
   IAgentRuntime,
   Memory,
@@ -88,7 +89,7 @@ export const flashLoanAction: Action = {
     state: State | undefined,
     _options: { [key: string]: unknown } | undefined,
     callback?: HandlerCallback,
-  ): Promise<void> => {
+  ): Promise<ActionResult> => {
     logger.log("Starting AAVE_FLASH_LOAN handler...");
 
     let currentState = state;
@@ -113,11 +114,16 @@ export const flashLoanAction: Action = {
 
     if (!isValidFlashLoanContent(content)) {
       logger.error("Invalid content for AAVE_FLASH_LOAN action.");
+      const errorMessage =
+        "Unable to process flash loan request. Please specify the asset, amount, and operation details.";
       callback?.({
-        text: "Unable to process flash loan request. Please specify the assets and amounts for the flash loan.",
+        text: errorMessage,
         content: { error: "Invalid flash loan parameters" },
       });
-      return;
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
 
     try {
@@ -125,11 +131,16 @@ export const flashLoanAction: Action = {
       const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
 
       if (!rpcUrl || !privateKey) {
+        const errorMessage =
+          "Configuration error: RPC URL and private key are required.";
         callback?.({
-          text: "Configuration error: RPC URL and private key are required.",
+          text: errorMessage,
           content: { error: "Missing configuration" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       // Parse assets and amounts
@@ -148,11 +159,16 @@ export const flashLoanAction: Action = {
         .map((amount: string) => amount.trim());
 
       if (assets.length !== amounts.length) {
+        const errorMessage =
+          "Error: The number of assets must match the number of amounts.";
         callback?.({
-          text: "Error: The number of assets must match the number of amounts.",
+          text: errorMessage,
           content: { error: "Asset/amount mismatch" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       // Get asset addresses (simplified - in production you'd have a mapping)
@@ -168,11 +184,15 @@ export const flashLoanAction: Action = {
         (asset: string) => !assetAddresses[asset.toUpperCase()],
       );
       if (unsupportedAssets.length > 0) {
+        const errorMessage = `Unsupported assets: ${unsupportedAssets.join(", ")}. Supported assets: USDC, WETH, DAI`;
         callback?.({
-          text: `Unsupported assets: ${unsupportedAssets.join(", ")}. Supported assets: USDC, WETH, DAI`,
+          text: errorMessage,
           content: { error: "Unsupported assets" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       const resolvedAssetAddresses = assets.map(
@@ -237,14 +257,29 @@ Note: This is a demonstration. In production, you would need a proper flash loan
           success: true,
         },
       });
+
+      return {
+        text: `Successfully executed flash loan for ${assets.join(", ")}`,
+        success: true,
+        data: {
+          assets: content.assets,
+          amounts: content.amounts,
+          transactionHash: mockTxHash,
+        },
+      };
     } catch (error) {
       logger.error("Flash loan operation failed:", error);
+      const errorMessage = "Failed to execute flash loan. Please try again.";
       callback?.({
-        text: "Failed to execute flash loan. Please try again with valid parameters.",
+        text: errorMessage,
         content: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
   },
   examples: [

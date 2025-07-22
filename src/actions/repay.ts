@@ -1,6 +1,7 @@
 import {
   Action,
   ActionExample,
+  ActionResult,
   HandlerCallback,
   IAgentRuntime,
   Memory,
@@ -85,7 +86,7 @@ export const repayAction: Action = {
     state: State | undefined,
     _options: { [key: string]: unknown } | undefined,
     callback?: HandlerCallback,
-  ): Promise<void> => {
+  ): Promise<ActionResult> => {
     logger.log("Starting AAVE_REPAY handler...");
 
     let currentState = state;
@@ -110,11 +111,16 @@ export const repayAction: Action = {
 
     if (!isValidRepayContent(content)) {
       logger.error("Invalid content for AAVE_REPAY action.");
+      const errorMessage =
+        "Unable to process repay request. Please specify the asset and amount to repay.";
       callback?.({
-        text: "Unable to process repay request. Please specify the asset and amount to repay.",
+        text: errorMessage,
         content: { error: "Invalid repay parameters" },
       });
-      return;
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
 
     try {
@@ -122,11 +128,16 @@ export const repayAction: Action = {
       const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
 
       if (!rpcUrl || !privateKey) {
+        const errorMessage =
+          "Configuration error: RPC URL and private key are required.";
         callback?.({
-          text: "Configuration error: RPC URL and private key are required.",
+          text: errorMessage,
           content: { error: "Missing configuration" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       // Get asset address (simplified - in production you'd have a mapping)
@@ -139,11 +150,15 @@ export const repayAction: Action = {
 
       const assetAddress = assetAddresses[content.asset.toUpperCase()];
       if (!assetAddress) {
+        const errorMessage = `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`;
         callback?.({
-          text: `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`,
+          text: errorMessage,
           content: { error: "Unsupported asset" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       const isMaxRepay = content.amount === "max" || content.amount === "-1";
@@ -199,14 +214,30 @@ Note: This is a demonstration. In production, actual blockchain transactions wou
           success: true,
         },
       });
+
+      return {
+        text: `Successfully repaid ${content.amount} ${content.asset} on Aave V3`,
+        success: true,
+        data: {
+          asset: content.asset,
+          amount: content.amount,
+          rateMode: content.rateMode,
+          transactionHash: mockTxHash,
+        },
+      };
     } catch (error) {
       logger.error("Repay operation failed:", error);
+      const errorMessage = "Failed to repay loan on Aave. Please try again.";
       callback?.({
-        text: "Failed to repay debt to Aave. Please try again.",
+        text: errorMessage,
         content: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
   },
   examples: [

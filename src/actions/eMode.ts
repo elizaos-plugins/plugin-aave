@@ -1,6 +1,7 @@
 import {
   Action,
   ActionExample,
+  ActionResult,
   HandlerCallback,
   IAgentRuntime,
   Memory,
@@ -93,7 +94,7 @@ export const eModeAction: Action = {
     state: State | undefined,
     _options: { [key: string]: unknown } | undefined,
     callback?: HandlerCallback,
-  ): Promise<void> => {
+  ): Promise<ActionResult> => {
     logger.log("Starting AAVE_EMODE handler...");
 
     let currentState = state;
@@ -118,11 +119,16 @@ export const eModeAction: Action = {
 
     if (!isValidEModeContent(content)) {
       logger.error("Invalid content for AAVE_EMODE action.");
+      const errorMessage =
+        "Unable to process e-mode request. Please specify the category ID.";
       callback?.({
-        text: "Unable to process eMode request. Please specify whether to enable or disable eMode and the category (1 for stablecoins, 2 for ETH derivatives).",
-        content: { error: "Invalid eMode parameters" },
+        text: errorMessage,
+        content: { error: "Invalid e-mode parameters" },
       });
-      return;
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
 
     try {
@@ -130,15 +136,20 @@ export const eModeAction: Action = {
       const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
 
       if (!rpcUrl || !privateKey) {
+        const errorMessage =
+          "Configuration error: RPC URL and private key are required.";
         callback?.({
-          text: "Configuration error: RPC URL and private key are required.",
+          text: errorMessage,
           content: { error: "Missing configuration" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
-      const isEnabling = content.enable;
-      const categoryId = content.categoryId;
+      const isEnabling = content?.enable ?? false;
+      const categoryId = content?.categoryId || 0;
       const action = isEnabling ? "enabled" : "disabled";
 
       // Get category information
@@ -189,21 +200,35 @@ Note: This is a demonstration. In production, actual blockchain transactions wou
         text: responseText,
         content: {
           action: "AAVE_EMODE",
-          categoryId: content.categoryId,
-          enable: content.enable,
+          categoryId: content?.categoryId || 0,
+          enable: content?.enable ?? false,
           categoryInfo,
           transactionHash: mockTxHash,
           success: true,
         },
       });
+
+      return {
+        text: `Successfully ${categoryId === 0 ? "disabled" : "enabled"} E-Mode on Aave V3`,
+        success: true,
+        data: {
+          categoryId: categoryId,
+          transactionHash: mockTxHash,
+        },
+      };
     } catch (error) {
-      logger.error("eMode operation failed:", error);
+      logger.error("E-Mode operation failed:", error);
+      const errorMessage = "Failed to set e-mode. Please try again.";
       callback?.({
-        text: "Failed to modify eMode setting. Please try again.",
+        text: errorMessage,
         content: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
   },
   examples: [

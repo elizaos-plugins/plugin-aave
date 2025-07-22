@@ -1,6 +1,7 @@
 import {
   Action,
   ActionExample,
+  ActionResult,
   HandlerCallback,
   IAgentRuntime,
   Memory,
@@ -83,7 +84,7 @@ export const withdrawAction: Action = {
     state: State | undefined,
     _options: { [key: string]: unknown } | undefined,
     callback?: HandlerCallback,
-  ): Promise<void> => {
+  ): Promise<ActionResult> => {
     logger.log("Starting AAVE_WITHDRAW handler...");
 
     let currentState = state;
@@ -108,11 +109,16 @@ export const withdrawAction: Action = {
 
     if (!isValidWithdrawContent(content)) {
       logger.error("Invalid content for AAVE_WITHDRAW action.");
+      const errorMessage =
+        "Unable to process withdraw request. Please specify the asset and amount to withdraw.";
       callback?.({
-        text: "Unable to process withdraw request. Please specify the asset and amount to withdraw.",
+        text: errorMessage,
         content: { error: "Invalid withdraw parameters" },
       });
-      return;
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
 
     try {
@@ -120,11 +126,16 @@ export const withdrawAction: Action = {
       const privateKey = runtime.getSetting("WALLET_PRIVATE_KEY");
 
       if (!rpcUrl || !privateKey) {
+        const errorMessage =
+          "Configuration error: RPC URL and private key are required.";
         callback?.({
-          text: "Configuration error: RPC URL and private key are required.",
+          text: errorMessage,
           content: { error: "Missing configuration" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       // Get asset address (simplified - in production you'd have a mapping)
@@ -137,11 +148,15 @@ export const withdrawAction: Action = {
 
       const assetAddress = assetAddresses[content.asset.toUpperCase()];
       if (!assetAddress) {
+        const errorMessage = `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`;
         callback?.({
-          text: `Unsupported asset: ${content.asset}. Supported assets: USDC, WETH, DAI`,
+          text: errorMessage,
           content: { error: "Unsupported asset" },
         });
-        return;
+        return {
+          text: errorMessage,
+          success: false,
+        };
       }
 
       const isMaxWithdraw = content.amount === "max" || content.amount === "-1";
@@ -194,14 +209,29 @@ Note: This is a demonstration. In production, actual blockchain transactions wou
           success: true,
         },
       });
+
+      return {
+        text: `Successfully withdrew ${content.amount} ${content.asset} from Aave V3`,
+        success: true,
+        data: {
+          asset: content.asset,
+          amount: content.amount,
+          transactionHash: mockTxHash,
+        },
+      };
     } catch (error) {
       logger.error("Withdraw operation failed:", error);
+      const errorMessage = "Failed to withdraw from Aave. Please try again.";
       callback?.({
-        text: "Failed to withdraw from Aave. Please try again.",
+        text: errorMessage,
         content: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
+      return {
+        text: errorMessage,
+        success: false,
+      };
     }
   },
   examples: [
