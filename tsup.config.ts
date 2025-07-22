@@ -1,20 +1,28 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from "tsup";
 
 export default defineConfig({
-    entry: ['src/index.ts'],
-    outDir: 'dist',
-    sourcemap: true,
-    clean: true,
-    format: ['esm'],
-    external: [
-        'dotenv',
-        'fs',
-        'path',
-        '@elizaos/core',
-        '@aave/contract-helpers',
-        '@aave/math-utils',
-        'ethers',
-        'bignumber.js'
-    ],
-    dts: true,
+  entry: ["src/index.ts"],
+  outDir: "dist",
+  tsconfig: "./tsconfig.build.json",
+  sourcemap: true,
+  clean: true,
+  format: ["esm"],
+  dts: true,
+  external: [
+    "dotenv",
+    "fs",
+    "path",
+    "https",
+    "http",
+    "@elizaos/core",
+    "zod",
+    "@aave/contract-helpers",
+    "@aave/math-utils",
+    "@aave/core-v3",
+    "@bgd-labs/aave-address-book",
+    "viem",
+    "ethers",
+    "bignumber.js",
+    "dayjs",
+  ],
 });

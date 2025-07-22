@@ -1,34 +1,19 @@
-import { Plugin } from '@elizaos/core';
+import { Plugin } from "@elizaos/core";
+import { supplyAction } from "./actions/supply";
+import { borrowAction } from "./actions/borrow";
+import { repayAction } from "./actions/repay";
+import { withdrawAction } from "./actions/withdraw";
+import { rateSwitchAction } from "./actions/rateSwitch";
+import { collateralManagementAction } from "./actions/collateralManagement";
+import { eModeAction } from "./actions/eMode";
+import { flashLoanAction } from "./actions/flashLoan";
+import { positionContextProvider } from "./providers/positionContext";
+import { healthFactorProvider } from "./providers/healthFactor";
 
-// Import all services
-import { AaveService, WalletService } from './services';
-
-// Import all actions
-import {
-  supplyAction,
-  borrowAction,
-  repayAction,
-  withdrawAction,
-  rateSwitchAction,
-  collateralManagementAction,
-  eModeAction,
-  flashLoanAction,
-} from './actions';
-
-// Import all providers
-import { PositionContextProvider, HealthFactorProvider } from './providers';
-
-// Import all evaluators
-import { EfficiencyModeEvaluator, InterestOptimizationEvaluator } from './evaluators';
-
-// Export the main plugin
 export const aavePlugin: Plugin = {
-  name: 'aave',
+  name: "aave",
   description:
-    'Aave V3 integration plugin for ElizaOS - enabling DeFi lending and borrowing capabilities on Base L2',
-
-  services: [new AaveService(), new WalletService()],
-
+    "Aave V3 integration plugin for ElizaOS - enabling DeFi lending and borrowing capabilities on Base L2",
   actions: [
     supplyAction,
     borrowAction,
@@ -39,20 +24,21 @@ export const aavePlugin: Plugin = {
     eModeAction,
     flashLoanAction,
   ],
-
-  providers: [new PositionContextProvider(), new HealthFactorProvider()],
-
-  evaluators: [new EfficiencyModeEvaluator(), new InterestOptimizationEvaluator()],
+  providers: [positionContextProvider, healthFactorProvider],
 };
 
-// Export types and interfaces
-export * from './types';
-
-// Export individual components for advanced usage
-export * from './services';
-export * from './actions';
-export * from './providers';
-export * from './evaluators';
-
-// Default export
 export default aavePlugin;
+
+// Export types for external use
+export * from "./types";
+export {
+  supplyAction,
+  borrowAction,
+  repayAction,
+  withdrawAction,
+  rateSwitchAction,
+  collateralManagementAction,
+  eModeAction,
+  flashLoanAction,
+};
+export { positionContextProvider, healthFactorProvider };
