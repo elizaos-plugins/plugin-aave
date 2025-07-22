@@ -1,1 +1,0 @@
-// Efficiency mode evaluator will be implemented in task 12
