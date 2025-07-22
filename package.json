@@ -1,6 +1,6 @@
 {
   "name": "@elizaos/plugin-aave",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ElizaOS plugin for Aave Protocol - DeFi lending and borrowing",
   "type": "module",
   "main": "dist/index.js",
