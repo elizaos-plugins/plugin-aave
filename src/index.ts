@@ -1,44 +1,29 @@
-import { Plugin } from "@elizaos/core";
-import { supplyAction } from "./actions/supply";
-import { borrowAction } from "./actions/borrow";
-import { repayAction } from "./actions/repay";
-import { withdrawAction } from "./actions/withdraw";
-import { rateSwitchAction } from "./actions/rateSwitch";
-import { collateralManagementAction } from "./actions/collateralManagement";
-import { eModeAction } from "./actions/eMode";
-import { flashLoanAction } from "./actions/flashLoan";
-import { positionContextProvider } from "./providers/positionContext";
-import { healthFactorProvider } from "./providers/healthFactor";
+import { Plugin } from '@elizaos/core';
+import { AaveService } from './services/index.js';
+import { supplyAction, withdrawAction, borrowAction, repayAction } from './actions/index.js';
+import { marketDataProvider, positionProvider } from './providers/index.js';
 
-export const aavePlugin: Plugin = {
-  name: "aave",
-  description:
-    "Aave V3 integration plugin for ElizaOS - enabling DeFi lending and borrowing capabilities on Base L2",
-  actions: [
-    supplyAction,
-    borrowAction,
-    repayAction,
-    withdrawAction,
-    rateSwitchAction,
-    collateralManagementAction,
-    eModeAction,
-    flashLoanAction,
-  ],
-  providers: [positionContextProvider, healthFactorProvider],
+export const plugin: Plugin = {
+  name: 'aave',
+  description: 'Aave V3 Protocol integration for lending and borrowing operations',
+  
+  // Core services
+  services: [AaveService],
+  
+  // User actions
+  actions: [supplyAction, withdrawAction, borrowAction, repayAction],
+  
+  // Context providers
+  providers: [marketDataProvider, positionProvider],
+  
+  // No evaluators for now
+  evaluators: [],
 };
 
-export default aavePlugin;
+export default plugin;
 
-// Export types for external use
-export * from "./types";
-export {
-  supplyAction,
-  borrowAction,
-  repayAction,
-  withdrawAction,
-  rateSwitchAction,
-  collateralManagementAction,
-  eModeAction,
-  flashLoanAction,
-};
-export { positionContextProvider, healthFactorProvider };
+// Re-export components for external use
+export { AaveService } from './services/index.js';
+export { supplyAction, withdrawAction, borrowAction, repayAction } from './actions/index.js';
+export { marketDataProvider, positionProvider } from './providers/index.js';
+export * from './types/index.js';

@@ -1,100 +1,66 @@
 {
   "name": "@elizaos/plugin-aave",
-  "description": "Aave V3 DeFi plugin for ElizaOS - enables lending, borrowing, flash loans, and advanced DeFi operations",
-  "version": "1.2.0",
+  "version": "1.0.0",
+  "description": "ElizaOS plugin for Aave Protocol - DeFi lending and borrowing",
   "type": "module",
   "main": "dist/index.js",
-  "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "packageType": "plugin",
-  "platform": "node",
-  "license": "MIT",
-  "author": "ElizaOS",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "bun test",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json,md}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aave/contract-helpers": "^1.29.13",
+    "@aave/math-utils": "^1.29.13",
+    "@bgd-labs/aave-address-book": "^4.25.1",
+    "@elizaos/core": "*",
+    "bignumber.js": "^9.1.2",
+    "ethers": "^5.7.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^9.15.0",
+    "prettier": "^3.3.3",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  },
+  "peerDependencies": {
+    "@elizaos/core": "*"
+  },
   "keywords": [
-    "plugin",
     "elizaos",
+    "plugin",
     "aave",
     "defi",
     "lending",
     "borrowing",
-    "flash-loans"
+    "ethereum",
+    "ai-agent"
   ],
+  "author": "ElizaOS Team",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/elizaos/eliza"
+    "url": "https://github.com/elizaos/eliza.git",
+    "directory": "packages/plugin-aave"
   },
-  "homepage": "https://elizaos.ai",
   "bugs": {
     "url": "https://github.com/elizaos/eliza/issues"
   },
-  "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      }
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    ".npmignore",
-    "package.json",
-    "tsup.config.ts"
-  ],
-  "dependencies": {
-    "@elizaos/core": "^1.3.0",
-    "@aave/core-v3": "^1.19.3",
-    "@aave/contract-helpers": "^1.36.0",
-    "@aave/math-utils": "^1.36.0",
-    "@bgd-labs/aave-address-book": "^3.3.0",
-    "viem": "^2.21.54",
-    "ethers": "^6.13.4",
-    "bignumber.js": "^9.1.2",
-    "dayjs": "^1.11.10",
-    "zod": "3.24.2"
-  },
-  "devDependencies": {
-    "prettier": "3.5.3",
-    "tsup": "8.5.0",
-    "typescript": "5.8.2",
-    "@types/node": "^22.10.2"
-  },
-  "scripts": {
-    "start": "elizaos start",
-    "dev": "elizaos dev",
-    "build": "tsup",
-    "lint": "prettier --write ./src",
-    "test": "bun test tests/",
-    "format": "prettier --write ./src",
-    "format:check": "prettier --check ./src"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "resolutions": {
-    "zod": "3.24.2"
-  },
-  "agentConfig": {
-    "pluginType": "elizaos:plugin:1.0.0",
-    "pluginParameters": {
-      "BASE_RPC_URL": {
-        "type": "string",
-        "description": "Base L2 RPC endpoint URL"
-      },
-      "WALLET_PRIVATE_KEY": {
-        "type": "string",
-        "description": "Private key for wallet operations (testnet only)"
-      },
-      "HEALTH_FACTOR_ALERT": {
-        "type": "number",
-        "description": "Health factor threshold for alerts (default: 1.5)"
-      },
-      "FLASH_LOAN_MAX_FEE": {
-        "type": "number",
-        "description": "Maximum acceptable flash loan fee percentage (default: 0.1)"
-      }
-    }
+  "homepage": "https://github.com/elizaos/eliza/tree/main/packages/plugin-aave",
+  "agent": {
+    "name": "Aave Protocol Agent",
+    "description": "DeFi agent for Aave lending and borrowing operations"
   }
 }
