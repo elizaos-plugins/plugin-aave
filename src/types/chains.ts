@@ -52,7 +52,7 @@ export const CHAIN_CONFIGS: Record<SupportedChain, ChainConfig> = {
     chainId: 1,
     nativeCurrency: 'ETH',
     wrappedNative: 'WETH',
-    defaultRpcUrl: 'https://eth.llamarpc.com',
+    defaultRpcUrl: 'https://rpc.flashbots.net/fast',
     isTestnet: false,
     popularAssets: ['USDC', 'USDT', 'DAI', 'WETH', 'WBTC', 'LINK', 'AAVE'],
   },
