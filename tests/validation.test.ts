@@ -340,27 +340,16 @@ describe('Validation Utilities', () => {
 
   describe('Amount Formatting', () => {
     it('should format amounts consistently', () => {
-      // Test formatAmount function if it exists
-      try {
-        const testCases = [
-          { input: new BigNumber('1000'), expected: '1,000' },
-          { input: new BigNumber('1000.123'), expected: '1,000.123' },
-          { input: new BigNumber('0.000001'), expected: '0.000001' },
-        ];
+      const testCases = [
+        { input: new BigNumber('1000'), expected: '1000' },
+        { input: new BigNumber('1000.123456789'), expected: '1000.123456789' },
+        { input: new BigNumber('0.000001'), expected: '0.000001' },
+        { input: new BigNumber('123.45'), expected: '123.45' },
+      ];
 
-        for (const testCase of testCases) {
-          try {
-            const result = formatAmount(testCase.input);
-            // Format function should exist and work
-            expect(typeof result).toBe('string');
-          } catch (error) {
-            // formatAmount might not exist yet, that's okay
-            console.warn('formatAmount not implemented yet');
-          }
-        }
-      } catch (error) {
-        // formatAmount doesn't exist yet, that's fine
-        expect(true).toBe(true);
+      for (const testCase of testCases) {
+        const result = formatAmount(testCase.input);
+        expect(result).toBe(testCase.expected);
       }
     });
   });

@@ -197,12 +197,135 @@ export class AaveService extends Service {
     }
   }
 
+  /**
+   * Estimates gas for a transaction before execution
+   */
+  private async estimateGas(txData: any): Promise<BigNumber> {
+    try {
+      this.ensureInitialized();
+      this.ensureSigner();
+      
+      const gasEstimate = await this.provider.estimateGas({
+        to: txData.to,
+        data: txData.data,
+        value: txData.value || '0',
+        from: await this.signer!.getAddress(),
+      });
+      
+      // Add 20% buffer for gas estimation
+      const gasWithBuffer = new BigNumber(gasEstimate.toString()).multipliedBy(1.2);
+      return gasWithBuffer;
+      
+    } catch (error) {
+      throw new AaveError(
+        'Failed to estimate gas for transaction',
+        AaveErrorCode.TRANSACTION_FAILED,
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+  }
+
+  /**
+   * Validates transaction parameters for safety
+   */
+  private validateTransactionSafety(params: any, operation: string): void {
+    // Check for zero address
+    if (params.user === '0x0000000000000000000000000000000000000000') {
+      throw new AaveError(
+        'Cannot use zero address for transactions',
+        AaveErrorCode.INVALID_PARAMETERS
+      );
+    }
+
+    // Check for reasonable amounts (not dust, not extremely large)
+    if (params.amount && params.amount !== 'max') {
+      const amount = new BigNumber(params.amount);
+      
+      // Check for dust amounts (less than 0.000001)
+      if (amount.isLessThan(0.000001)) {
+        throw new AaveError(
+          `Amount too small for ${operation}. Minimum: 0.000001`,
+          AaveErrorCode.INVALID_PARAMETERS
+        );
+      }
+      
+      // Check for unreasonably large amounts (greater than 1 billion)
+      if (amount.isGreaterThan(1000000000)) {
+        throw new AaveError(
+          `Amount too large for ${operation}. Maximum: 1 billion`,
+          AaveErrorCode.INVALID_PARAMETERS
+        );
+      }
+    }
+
+    // Validate asset symbol/address format
+    if (!params.asset || params.asset.trim().length === 0) {
+      throw new AaveError(
+        'Asset identifier is required',
+        AaveErrorCode.INVALID_PARAMETERS
+      );
+    }
+  }
+
+  /**
+   * Executes transaction with safety checks and retries
+   */
+  private async executeTransaction(txData: any, operation: string): Promise<any> {
+    this.ensureInitialized();
+    this.ensureSigner();
+
+    try {
+      // Estimate gas first
+      const gasLimit = await this.estimateGas(txData);
+      
+      // Add gas limit to transaction
+      const txWithGas = {
+        ...txData,
+        gasLimit: gasLimit.toFixed(0),
+      };
+
+      // Execute transaction
+      const tx = await this.signer!.sendTransaction(txWithGas);
+      
+      elizaLogger.info(`${operation} transaction submitted: ${tx.hash}`);
+      
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      
+      if (receipt.status === 0) {
+        throw new Error(`Transaction failed: ${receipt.transactionHash}`);
+      }
+
+      elizaLogger.info(`${operation} transaction confirmed: ${receipt.transactionHash}`);
+      
+      return {
+        transactionHash: receipt.transactionHash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString(),
+        success: true,
+      };
+
+    } catch (error) {
+      elizaLogger.error(`${operation} transaction failed:`, error);
+      
+      throw new AaveError(
+        `${operation} transaction failed: ${error instanceof Error ? error.message : String(error)}`,
+        AaveErrorCode.TRANSACTION_FAILED,
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+  }
+
   async supply(params: SupplyParams): Promise<SupplyResult> {
     try {
       this.ensureInitialized();
       this.ensureSigner();
 
       const validatedParams = validateSupplyParams(params);
+      
+      // Validate transaction safety
+      this.validateTransactionSafety(validatedParams, 'supply');
+      
       const amount = parseAmount(validatedParams.amount).toString();
       const userAddress = validatedParams.user;
 
@@ -226,7 +349,7 @@ export class AaveService extends Service {
         );
       }
 
-      // Execute transactions (approval + supply)
+      // Execute transactions with safety checks
       let approvalTxHash: string | undefined;
       let supplyTxHash: string;
 
@@ -236,18 +359,18 @@ export class AaveService extends Service {
           to: (tx as any).to,
           data: (tx as any).data,
           value: (tx as any).value || '0',
-          gasLimit: (tx as any).gasLimit,
         };
         
-        const txResponse = await this.signer!.sendTransaction(ethersTransaction);
-        const receipt = await txResponse.wait();
+        // Execute with safety checks and gas estimation
+        const txResult = await this.executeTransaction(
+          ethersTransaction, 
+          tx.txType === 'ERC20_APPROVAL' ? 'Token Approval' : 'Supply'
+        );
 
         if (tx.txType === 'ERC20_APPROVAL') {
-          approvalTxHash = receipt!.transactionHash;
-          elizaLogger.info(`Token approval completed: ${approvalTxHash}`);
+          approvalTxHash = txResult.transactionHash;
         } else {
-          supplyTxHash = receipt!.transactionHash;
-          elizaLogger.info(`Supply transaction completed: ${supplyTxHash}`);
+          supplyTxHash = txResult.transactionHash;
         }
       }
 

@@ -57,6 +57,35 @@ export class MockRuntime implements Partial<IAgentRuntime> {
     // Mock service getter - would return actual services in real implementation
     return null;
   }
+
+  // Mock useModel for action handlers
+  async useModel(modelType: any, options: any): Promise<any> {
+    // Return a mock response that looks like an LLM response
+    return {
+      text: `Mock LLM response for: ${options.prompt?.slice(0, 50)}...`,
+      success: true,
+    };
+  }
+
+  // Mock other required methods
+  async addMemory(memory: any): Promise<void> {
+    console.log('Mock addMemory:', memory);
+  }
+
+  async getMemory(options?: any): Promise<any[]> {
+    return [];
+  }
+
+  // Add other IAgentRuntime methods as needed
+  character = {
+    name: 'TestAgent',
+    description: 'Test agent for Aave integration testing',
+  };
+
+  agentId = 'test-agent-id';
+  databaseAdapter = null;
+  vectorProvider = null;
+  logger = console;
 }
 
 /**
